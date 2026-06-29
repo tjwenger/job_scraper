@@ -92,6 +92,12 @@ def upsert_job(job: dict) -> bool:
         return True
 
 
+def get_job_by_id(job_id: str) -> dict | None:
+    with _conn() as conn:
+        row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    return dict(row) if row else None
+
+
 def get_jobs(
     search: str = "",
     source: str = "",

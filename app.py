@@ -1,4 +1,5 @@
 import logging
+import re
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 load_dotenv()  # Must run before any module reads env vars
@@ -119,3 +120,50 @@ async def scrape_status():
     """Returns whether a scrape is currently running and the total job count."""
     running = db.is_scrape_running()
     return {"running": running, "total": db.count_jobs()}
+
+
+@app.post("/tailor/{job_id}")
+async def tailor_job(job_id: str):
+    """Call Claude to tailor resume.txt for the given job. Returns tailored text as JSON."""
+    jobs = db.get_jobs(limit=1, offset=0)  # need a way to fetch by id
+    job = db.get_job_by_id(job_id)
+    if not job:
+        return JSONResponse({"error": "Job not found"}, status_code=404)
+    try:
+        from tailor import tailor_resume
+        text = tailor_resume(
+            title=job["title"],
+            company=job["company"],
+            description=job.get("description", ""),
+        )
+        return {"tailored": text}
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.post("/download")
+async def download_resume(
+    content: str = Form(...),
+    fmt: str = Form("docx"),
+    filename: str = Form("tailored_resume"),
+):
+    """Generate and return a DOCX or PDF from the tailored resume text."""
+    from tailor import generate_docx, generate_pdf
+    from fastapi.responses import Response
+
+    safe_name = re.sub(r"[^\w\-]", "_", filename)
+
+    if fmt == "pdf":
+        data = generate_pdf(content)
+        return Response(
+            content=data,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="{safe_name}.pdf"'},
+        )
+    else:
+        data = generate_docx(content)
+        return Response(
+            content=data,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={"Content-Disposition": f'attachment; filename="{safe_name}.docx"'},
+        )

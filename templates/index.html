@@ -68,6 +68,22 @@
 
   .btn-decline { background: transparent; border: 1px solid #7f1d1d; color: #f87171; border-radius: .25rem; padding: 3px 8px; font-size: .75rem; cursor: pointer; }
   .btn-decline:hover { background: #7f1d1d; color: #fff; }
+  .btn-tailor { background: transparent; border: 1px solid #6d28d9; color: #a78bfa; border-radius: .25rem; padding: 3px 8px; font-size: .75rem; cursor: pointer; margin-right: 4px; }
+  .btn-tailor:hover { background: #6d28d9; color: #fff; }
+
+  /* Tailor modal */
+  .tailor-modal { background: #1e2130; border: 1px solid #2d3352; border-radius: .5rem; padding: 1.5rem; width: 680px; max-width: 96vw; max-height: 88vh; display: flex; flex-direction: column; gap: .75rem; }
+  .tailor-modal h3 { font-size: 1rem; color: #f1f5f9; margin: 0; }
+  .tailor-modal .job-label { font-size: .8rem; color: #64748b; }
+  .tailor-modal textarea { flex: 1; min-height: 340px; background: #0f1117; border: 1px solid #2d3352; border-radius: .375rem; color: #e2e8f0; padding: .6rem .75rem; font-size: .8rem; font-family: monospace; resize: vertical; line-height: 1.5; }
+  .tailor-actions { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+  .btn-download { padding: .45rem 1rem; border-radius: .375rem; font-size: .875rem; cursor: pointer; border: none; font-weight: 600; }
+  .btn-docx { background: #1e3a5f; color: #93c5fd; border: 1px solid #3b82f6; }
+  .btn-docx:hover { background: #2d4d7a; }
+  .btn-pdf  { background: #3b1f5e; color: #c4b5fd; border: 1px solid #7c3aed; }
+  .btn-pdf:hover { background: #4c2a7a; }
+  .tailor-loading { display: flex; align-items: center; gap: .6rem; color: #a78bfa; font-size: .875rem; padding: 2rem 0; justify-content: center; }
+  .tailor-error { color: #f87171; font-size: .875rem; padding: .5rem 0; }
   .show-declined-toggle { font-size: .8rem; color: #64748b; display: flex; align-items: center; gap: .4rem; cursor: pointer; }
   .note-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #f59e0b; margin-left: 5px; cursor: help; vertical-align: middle; }
 
@@ -242,7 +258,28 @@
       <span id="scrape-status-msg">Scraping in progress…</span>
       <span class="elapsed" id="scrape-elapsed"></span>
     </div>
-    {% if request.query_params.get('scoring') %}
+    <!-- Tailor resume modal -->
+<div class="modal-overlay" id="tailor-modal">
+  <div class="tailor-modal">
+    <div>
+      <h3>Tailor Resume</h3>
+      <div class="job-label" id="tailor-job-label"></div>
+    </div>
+    <div id="tailor-loading" class="tailor-loading" style="display:none">
+      <span class="spinner" style="border-color:rgba(167,139,250,.3);border-top-color:#a78bfa"></span>
+      Generating tailored resume with Claude…
+    </div>
+    <div id="tailor-error" class="tailor-error" style="display:none"></div>
+    <textarea id="tailor-text" placeholder="Tailored resume will appear here…" spellcheck="false"></textarea>
+    <div class="tailor-actions">
+      <button class="btn-download btn-docx" onclick="downloadTailored('docx')">⬇ Download DOCX</button>
+      <button class="btn-download btn-pdf"  onclick="downloadTailored('pdf')">⬇ Download PDF</button>
+      <button class="btn-cancel" style="margin-left:auto" onclick="closeTailor()">Close</button>
+    </div>
+  </div>
+</div>
+
+{% if request.query_params.get('scoring') %}
     <div class="scraping-banner" style="border-color:#34d399;color:#34d399;">Scoring started — jobs will be ranked by fit as results come in. Refresh to see scores.</div>
     {% endif %}
 
@@ -325,7 +362,8 @@
               <option value="declined"   {% if job.status=='declined' %}selected{% endif %}>declined</option>
             </select>
           </td>
-          <td>
+          <td style="white-space:nowrap">
+            <button class="btn-tailor" onclick="openTailor('{{ job.id }}', '{{ job.title|replace("'","\\'")|replace('"','\\"') }}', '{{ job.company|replace("'","\\'")|replace('"','\\"') }}')" title="Tailor resume for this job">✦</button>
             <button class="btn-decline" onclick="declineJob('{{ job.id }}', this)" title="Decline — hide this job">✕</button>
           </td>
         </tr>
@@ -415,6 +453,73 @@ document.getElementById('decline-modal').addEventListener('click', function(e) {
 
 // Close on Escape
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+// --- Tailor resume ---
+let _tailorJobId = null;
+
+function openTailor(jobId, title, company) {
+  _tailorJobId = jobId;
+  document.getElementById('tailor-job-label').textContent = `${title} — ${company}`;
+  document.getElementById('tailor-text').value = '';
+  document.getElementById('tailor-error').style.display = 'none';
+  document.getElementById('tailor-modal').classList.add('open');
+  generateTailored(jobId);
+}
+
+function closeTailor() {
+  document.getElementById('tailor-modal').classList.remove('open');
+  _tailorJobId = null;
+}
+
+async function generateTailored(jobId) {
+  const loading = document.getElementById('tailor-loading');
+  const textarea = document.getElementById('tailor-text');
+  const errEl    = document.getElementById('tailor-error');
+
+  loading.style.display = 'flex';
+  textarea.style.display = 'none';
+  errEl.style.display = 'none';
+
+  try {
+    const res  = await fetch(`/tailor/${jobId}`, { method: 'POST' });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    textarea.value = data.tailored;
+  } catch (e) {
+    errEl.textContent = `Error: ${e.message}`;
+    errEl.style.display = 'block';
+  } finally {
+    loading.style.display = 'none';
+    textarea.style.display = 'block';
+  }
+}
+
+function downloadTailored(fmt) {
+  const content  = document.getElementById('tailor-text').value.trim();
+  if (!content) return;
+  const jobLabel = document.getElementById('tailor-job-label').textContent;
+  const filename = 'TJ_Wenger_Resume_' + jobLabel.replace(/[^a-zA-Z0-9]+/g, '_').replace(/_+$/, '');
+
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = '/download';
+  form.style.display = 'none';
+
+  [['content', content], ['fmt', fmt], ['filename', filename]].forEach(([name, val]) => {
+    const inp = document.createElement('input');
+    inp.name  = name;
+    inp.value = val;
+    form.appendChild(inp);
+  });
+
+  document.body.appendChild(form);
+  form.submit();
+  document.body.removeChild(form);
+}
+
+document.getElementById('tailor-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeTailor();
+});
 
 // --- Scrape progress polling ---
 const scrapeBtn    = document.getElementById('scrape-btn');
