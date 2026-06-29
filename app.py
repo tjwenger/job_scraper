@@ -10,7 +10,7 @@ from fastapi.templating import Jinja2Templates
 import database as db
 from scheduler import run_scraper, run_all_scrapers, start_scheduler, stop_scheduler
 from scrapers import ALL_SCRAPERS
-from config import KEYWORDS
+import config
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 
@@ -58,7 +58,7 @@ async def index(
             "sources": sources,
             "scrape_log": scrape_log,
             "all_scrapers": list(ALL_SCRAPERS.keys()),
-            "keywords": KEYWORDS,
+            "keywords": config.KEYWORDS,
             "show_declined": show_declined,
         },
     )
@@ -163,6 +163,21 @@ async def tailor_job(job_id: str):
         return {"tailored": text}
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.get("/api/keywords")
+async def get_keywords():
+    return {"keywords": config.KEYWORDS, "exclude_keywords": config.EXCLUDE_KEYWORDS}
+
+
+@app.post("/api/keywords")
+async def save_keywords(request: Request):
+    body = await request.json()
+    kw = [k.strip() for k in body.get("keywords", []) if str(k).strip()]
+    ex = [k.strip() for k in body.get("exclude_keywords", []) if str(k).strip()]
+    config.save_keywords(kw, ex)
+    config.reload()
+    return {"ok": True, "keywords": config.KEYWORDS, "exclude_keywords": config.EXCLUDE_KEYWORDS}
 
 
 @app.post("/download")
