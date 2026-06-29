@@ -2,6 +2,8 @@
 
 A locally-hosted job scraper and ranking dashboard targeting VP / Director-level Software Engineering leadership roles at remote technology companies. Scrapes multiple sources, scores each posting against your resume using Claude AI, and lets you track applications in one place.
 
+![Dashboard screenshot](docs/dashboard.png)
+
 ---
 
 ## Features
