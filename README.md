@@ -1,5 +1,7 @@
 # AI Job Search Dashboard
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 A locally-hosted job scraper and ranking dashboard targeting VP / Director-level Software Engineering leadership roles at remote technology companies. Scrapes multiple sources, scores each posting against your resume using Claude AI, and lets you track applications in one place.
 
 ![Dashboard screenshot](docs/dashboard.png)
@@ -155,3 +157,10 @@ AI_Job_search/
 A Claude Code scheduled task (`daily-job-scrape`) runs all scrapers at 9 am daily. The task is configured in Claude Code's scheduler — **the app must be running** for it to fire.
 
 To view or modify the schedule, open Claude Code and check the scheduled tasks list.
+
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE) for details. Free to use, modify, and distribute.
