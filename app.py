@@ -3,7 +3,7 @@ import re
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 load_dotenv()  # Must run before any module reads env vars
-from fastapi import FastAPI, Request, Form, BackgroundTasks
+from fastapi import FastAPI, Request, Form, BackgroundTasks, UploadFile, File
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
@@ -120,6 +120,30 @@ async def scrape_status():
     """Returns whether a scrape is currently running and the total job count."""
     running = db.is_scrape_running()
     return {"running": running, "total": db.count_jobs()}
+
+
+@app.post("/upload-resume")
+async def upload_resume(file: UploadFile = File(...)):
+    """Replace resume.txt with the uploaded .txt or .pdf file."""
+    from pathlib import Path
+    resume_path = Path(__file__).parent / "resume.txt"
+
+    data = await file.read()
+    filename = (file.filename or "").lower()
+
+    if filename.endswith(".pdf"):
+        import io
+        from pypdf import PdfReader
+        reader = PdfReader(io.BytesIO(data))
+        text = "\n".join(page.extract_text() or "" for page in reader.pages).strip()
+    else:
+        text = data.decode("utf-8", errors="replace").strip()
+
+    if not text:
+        return JSONResponse({"error": "Could not extract text from file."}, status_code=400)
+
+    resume_path.write_text(text, encoding="utf-8")
+    return JSONResponse({"ok": True, "chars": len(text)})
 
 
 @app.post("/tailor/{job_id}")

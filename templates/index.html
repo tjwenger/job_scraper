@@ -230,6 +230,16 @@
       <p style="font-size:.72rem;color:#64748b;margin-top:.4rem;">Runs automatically after each scrape if ANTHROPIC_API_KEY is set.</p>
     </div>
 
+    <!-- Resume upload -->
+    <div>
+      <h2>Resume</h2>
+      <label id="resume-upload-label" style="display:block;width:100%;padding:.5rem;border-radius:.375rem;border:1px dashed #2d3352;color:#64748b;cursor:pointer;font-size:.8rem;text-align:center;transition:border-color .15s;">
+        ↑ Upload new resume (.pdf or .txt)
+        <input type="file" id="resume-file-input" accept=".pdf,.txt" style="display:none" onchange="uploadResume(this)">
+      </label>
+      <div id="resume-upload-status" style="font-size:.72rem;margin-top:.35rem;display:none"></div>
+    </div>
+
     <!-- Rejection review -->
     <div>
       <h2>Scraper Tuning</h2>
@@ -691,6 +701,42 @@ function downloadTailored(fmt) {
 document.getElementById('tailor-modal').addEventListener('click', function(e) {
   if (e.target === this) closeTailor();
 });
+
+// --- Resume upload ---
+async function uploadResume(input) {
+  if (!input.files.length) return;
+  const file      = input.files[0];
+  const label     = document.getElementById('resume-upload-label');
+  const statusEl  = document.getElementById('resume-upload-status');
+
+  label.style.borderColor = '#3b82f6';
+  label.style.color = '#60a5fa';
+  label.childNodes[0].textContent = '↑ Uploading…';
+  statusEl.style.display = 'none';
+
+  const fd = new FormData();
+  fd.append('file', file);
+
+  try {
+    const res  = await fetch('/upload-resume', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    statusEl.textContent = `Resume updated (${(data.chars / 1000).toFixed(1)}k chars). New tailored resumes will use it.`;
+    statusEl.style.color = '#34d399';
+    label.childNodes[0].textContent = '✓ ' + file.name;
+    label.style.borderColor = '#34d399';
+    label.style.color = '#34d399';
+  } catch (e) {
+    statusEl.textContent = `Error: ${e.message}`;
+    statusEl.style.color = '#f87171';
+    label.childNodes[0].textContent = '↑ Upload new resume (.pdf or .txt)';
+    label.style.borderColor = '#2d3352';
+    label.style.color = '#64748b';
+  } finally {
+    statusEl.style.display = 'block';
+    input.value = '';
+  }
+}
 
 // --- Scrape progress polling ---
 const scrapeBtn    = document.getElementById('scrape-btn');
