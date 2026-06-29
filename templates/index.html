@@ -95,8 +95,8 @@
   .btn-download { padding: .45rem 1rem; border-radius: .375rem; font-size: .875rem; cursor: pointer; border: none; font-weight: 600; }
   .btn-docx { background: #1e3a5f; color: #93c5fd; border: 1px solid #3b82f6; }
   .btn-docx:hover { background: #2d4d7a; }
-  .btn-pdf  { background: #3b1f5e; color: #c4b5fd; border: 1px solid #7c3aed; }
-  .btn-pdf:hover { background: #4c2a7a; }
+  .btn-pdf  { background: #1a2f1a; color: #86efac; border: 1px solid #16a34a; }
+  .btn-pdf:hover { background: #14532d; }
   .btn-toggle-edit { background: transparent; border: 1px solid #2d3352; color: #64748b; border-radius: .375rem; padding: .35rem .75rem; font-size: .8rem; cursor: pointer; }
   .btn-toggle-edit:hover { color: #94a3b8; border-color: #475569; }
   .tailor-loading { display: flex; align-items: center; gap: .6rem; color: #a78bfa; font-size: .875rem; padding: 2rem 0; justify-content: center; }
@@ -296,7 +296,7 @@
     </div>
     <div class="tailor-actions">
       <button class="btn-download btn-docx" onclick="downloadTailored('docx')">⬇ Download DOCX</button>
-      <button class="btn-download btn-pdf"  onclick="downloadTailored('pdf')">⬇ Download PDF</button>
+      <button class="btn-download btn-pdf"  onclick="printResume()">🖨 Print / Save as PDF</button>
       <button class="btn-cancel" style="margin-left:auto" onclick="closeTailor()">Close</button>
     </div>
   </div>
@@ -627,6 +627,42 @@ async function generateTailored(jobId) {
   } finally {
     loading.style.display = 'none';
   }
+}
+
+function printResume() {
+  const previewHtml = document.getElementById('tailor-preview').innerHTML;
+  if (!previewHtml.trim()) return;
+
+  const win = window.open('', '_blank', 'width=800,height=1000');
+  win.document.write(`<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Resume</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Calibri, system-ui, sans-serif; color: #1a1a2e; font-size: 13px; line-height: 1.6; padding: 0.75in 0.85in; }
+  .rh { text-align: center; padding-bottom: 0.75rem; margin-bottom: 0.75rem; border-bottom: 2px solid #2d6ad4; }
+  .rh-name { font-size: 20px; font-weight: 700; margin: 0 0 2px; }
+  .rh-sub  { font-size: 12px; color: #555; margin: 0 0 4px; }
+  .rh-contact { font-size: 11px; color: #777; }
+  .rs { margin-bottom: 0.9rem; }
+  .rs-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #2d6ad4; border-bottom: 0.5px solid #ccc; padding-bottom: 3px; margin-bottom: 0.4rem; }
+  .job-row { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 4px; margin-bottom: 2px; }
+  .job-title { font-size: 13px; font-weight: 700; }
+  .job-meta  { font-size: 11px; color: #555; }
+  ul { margin: 2px 0 6px 0; padding-left: 16px; }
+  ul li { font-size: 12px; color: #222; margin-bottom: 2px; line-height: 1.5; }
+  .body-para { font-size: 12px; color: #222; margin: 0 0 0.4rem; }
+  @page { margin: 0; }
+  @media print { body { padding: 0.6in 0.75in; } }
+</style>
+</head>
+<body>${previewHtml}</body>
+</html>`);
+  win.document.close();
+  win.focus();
+  setTimeout(() => { win.print(); }, 400);
 }
 
 function downloadTailored(fmt) {
