@@ -72,16 +72,33 @@
   .btn-tailor:hover { background: #6d28d9; color: #fff; }
 
   /* Tailor modal */
-  .tailor-modal { background: #1e2130; border: 1px solid #2d3352; border-radius: .5rem; padding: 1.5rem; width: 680px; max-width: 96vw; max-height: 88vh; display: flex; flex-direction: column; gap: .75rem; }
+  .tailor-modal { background: #1e2130; border: 1px solid #2d3352; border-radius: .5rem; padding: 1.5rem; width: 760px; max-width: 96vw; max-height: 90vh; display: flex; flex-direction: column; gap: .75rem; }
   .tailor-modal h3 { font-size: 1rem; color: #f1f5f9; margin: 0; }
   .tailor-modal .job-label { font-size: .8rem; color: #64748b; }
-  .tailor-modal textarea { flex: 1; min-height: 340px; background: #0f1117; border: 1px solid #2d3352; border-radius: .375rem; color: #e2e8f0; padding: .6rem .75rem; font-size: .8rem; font-family: monospace; resize: vertical; line-height: 1.5; }
+  .tailor-body { flex: 1; overflow-y: auto; min-height: 0; background: #fff; border-radius: .375rem; }
+  .tailor-body.dark-edit { background: #0f1117; }
+  .resume-preview { padding: 1.5rem 2rem; font-family: system-ui, -apple-system, sans-serif; color: #1a1a2e; font-size: 13px; line-height: 1.6; }
+  .resume-preview .rh { text-align: center; padding-bottom: 1rem; margin-bottom: 1rem; border-bottom: 2px solid #2d6ad4; }
+  .resume-preview .rh-name { font-size: 20px; font-weight: 700; margin: 0 0 2px; color: #1a1a2e; }
+  .resume-preview .rh-sub  { font-size: 12px; color: #555; margin: 0 0 4px; }
+  .resume-preview .rh-contact { font-size: 11px; color: #777; margin: 0; }
+  .resume-preview .rs { margin-bottom: 1rem; }
+  .resume-preview .rs-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #2d6ad4; border-bottom: .5px solid #ccc; padding-bottom: 3px; margin-bottom: .5rem; }
+  .resume-preview .job-row { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 4px; margin-bottom: 2px; }
+  .resume-preview .job-title { font-size: 13px; font-weight: 700; color: #1a1a2e; }
+  .resume-preview .job-meta  { font-size: 11px; color: #666; }
+  .resume-preview ul { margin: 2px 0 8px 0; padding-left: 16px; }
+  .resume-preview ul li { font-size: 12.5px; color: #333; margin-bottom: 2px; line-height: 1.5; }
+  .resume-preview .body-para { font-size: 12.5px; color: #333; margin: 0 0 .5rem; }
+  .tailor-edit { width: 100%; height: 380px; background: #0f1117; border: none; border-radius: .375rem; color: #e2e8f0; padding: .6rem .75rem; font-size: .8rem; font-family: monospace; resize: vertical; line-height: 1.5; outline: none; }
   .tailor-actions { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
   .btn-download { padding: .45rem 1rem; border-radius: .375rem; font-size: .875rem; cursor: pointer; border: none; font-weight: 600; }
   .btn-docx { background: #1e3a5f; color: #93c5fd; border: 1px solid #3b82f6; }
   .btn-docx:hover { background: #2d4d7a; }
   .btn-pdf  { background: #3b1f5e; color: #c4b5fd; border: 1px solid #7c3aed; }
   .btn-pdf:hover { background: #4c2a7a; }
+  .btn-toggle-edit { background: transparent; border: 1px solid #2d3352; color: #64748b; border-radius: .375rem; padding: .35rem .75rem; font-size: .8rem; cursor: pointer; }
+  .btn-toggle-edit:hover { color: #94a3b8; border-color: #475569; }
   .tailor-loading { display: flex; align-items: center; gap: .6rem; color: #a78bfa; font-size: .875rem; padding: 2rem 0; justify-content: center; }
   .tailor-error { color: #f87171; font-size: .875rem; padding: .5rem 0; }
   .show-declined-toggle { font-size: .8rem; color: #64748b; display: flex; align-items: center; gap: .4rem; cursor: pointer; }
@@ -261,16 +278,22 @@
     <!-- Tailor resume modal -->
 <div class="modal-overlay" id="tailor-modal">
   <div class="tailor-modal">
-    <div>
-      <h3>Tailor Resume</h3>
-      <div class="job-label" id="tailor-job-label"></div>
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:.5rem">
+      <div>
+        <h3>Tailor Resume</h3>
+        <div class="job-label" id="tailor-job-label"></div>
+      </div>
+      <button class="btn-toggle-edit" id="tailor-toggle-btn" onclick="toggleTailorEdit()" style="display:none">Edit plain text</button>
     </div>
     <div id="tailor-loading" class="tailor-loading" style="display:none">
       <span class="spinner" style="border-color:rgba(167,139,250,.3);border-top-color:#a78bfa"></span>
       Generating tailored resume with Claude…
     </div>
     <div id="tailor-error" class="tailor-error" style="display:none"></div>
-    <textarea id="tailor-text" placeholder="Tailored resume will appear here…" spellcheck="false"></textarea>
+    <div class="tailor-body" id="tailor-body" style="display:none">
+      <div class="resume-preview" id="tailor-preview"></div>
+      <textarea class="tailor-edit" id="tailor-text" spellcheck="false" style="display:none" oninput="syncPreviewFromEdit()"></textarea>
+    </div>
     <div class="tailor-actions">
       <button class="btn-download btn-docx" onclick="downloadTailored('docx')">⬇ Download DOCX</button>
       <button class="btn-download btn-pdf"  onclick="downloadTailored('pdf')">⬇ Download PDF</button>
@@ -456,12 +479,17 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal()
 
 // --- Tailor resume ---
 let _tailorJobId = null;
+let _tailorEditMode = false;
 
 function openTailor(jobId, title, company) {
   _tailorJobId = jobId;
+  _tailorEditMode = false;
   document.getElementById('tailor-job-label').textContent = `${title} — ${company}`;
   document.getElementById('tailor-text').value = '';
+  document.getElementById('tailor-preview').innerHTML = '';
   document.getElementById('tailor-error').style.display = 'none';
+  document.getElementById('tailor-body').style.display = 'none';
+  document.getElementById('tailor-toggle-btn').style.display = 'none';
   document.getElementById('tailor-modal').classList.add('open');
   generateTailored(jobId);
 }
@@ -471,26 +499,133 @@ function closeTailor() {
   _tailorJobId = null;
 }
 
-async function generateTailored(jobId) {
-  const loading = document.getElementById('tailor-loading');
+function toggleTailorEdit() {
+  _tailorEditMode = !_tailorEditMode;
+  const preview  = document.getElementById('tailor-preview');
   const textarea = document.getElementById('tailor-text');
-  const errEl    = document.getElementById('tailor-error');
+  const body     = document.getElementById('tailor-body');
+  const btn      = document.getElementById('tailor-toggle-btn');
+  if (_tailorEditMode) {
+    preview.style.display  = 'none';
+    textarea.style.display = 'block';
+    body.classList.add('dark-edit');
+    btn.textContent = 'Show preview';
+  } else {
+    // sync preview from any edits made
+    renderResumePreview(textarea.value);
+    preview.style.display  = 'block';
+    textarea.style.display = 'none';
+    body.classList.remove('dark-edit');
+    btn.textContent = 'Edit plain text';
+  }
+}
+
+function syncPreviewFromEdit() {
+  // live-sync is expensive; we sync on toggle instead
+}
+
+function _esc(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function renderResumePreview(text) {
+  const lines = text.split('\n');
+  let html = '';
+  let i = 0;
+
+  // Header: first non-empty lines before first ALL-CAPS section
+  const headerLines = [];
+  while (i < lines.length) {
+    const l = lines[i].trim();
+    if (l && l === l.toUpperCase() && l.length > 3 && !/^[-•]/.test(l)) break;
+    if (l) headerLines.push(l);
+    i++;
+  }
+
+  if (headerLines.length) {
+    // Split name from tagline on " — "
+    const nameParts = headerLines[0].split(' — ');
+    html += `<div class="rh">`;
+    html += `<p class="rh-name">${_esc(nameParts[0].trim())}</p>`;
+    if (nameParts[1]) html += `<p class="rh-sub">${_esc(nameParts[1].trim())}</p>`;
+    if (headerLines[1]) html += `<p class="rh-contact">${_esc(headerLines[1])}</p>`;
+    html += `</div>`;
+  }
+
+  // Sections
+  while (i < lines.length) {
+    const l = lines[i].trim();
+    if (!l) { i++; continue; }
+
+    // Section header: ALL CAPS, no leading dash
+    if (l === l.toUpperCase() && l.length > 3 && !/^[-•]/.test(l) && !/^\d/.test(l)) {
+      html += `<div class="rs"><div class="rs-title">${_esc(l)}</div>`;
+      i++;
+      // Accumulate section body
+      let inEntry = false;
+      while (i < lines.length) {
+        const sl = lines[i].trim();
+        // Next section header → break
+        if (sl && sl === sl.toUpperCase() && sl.length > 3 && !/^[-•]/.test(sl) && !/^\d/.test(sl)) break;
+
+        if (!sl) { i++; continue; }
+
+        if (sl.startsWith('-') || sl.startsWith('•')) {
+          // bullet
+          if (!inEntry) { html += `<ul>`; inEntry = true; }
+          html += `<li>${_esc(sl.replace(/^[-•]\s*/,''))}</li>`;
+        } else {
+          // close open bullet list
+          if (inEntry) { html += `</ul>`; inEntry = false; }
+          // Detect job heading: contains " — " or " | " with a date-like segment
+          if (/ [—|] /.test(sl) && /\d{4}/.test(sl)) {
+            const sep = sl.includes(' — ') ? ' — ' : ' | ';
+            const idx = sl.indexOf(sep);
+            const jobTitle = sl.slice(0, idx);
+            const jobMeta  = sl.slice(idx + sep.length);
+            html += `<div class="job-row"><span class="job-title">${_esc(jobTitle)}</span><span class="job-meta">${_esc(jobMeta)}</span></div>`;
+          } else {
+            html += `<p class="body-para">${_esc(sl)}</p>`;
+          }
+        }
+        i++;
+      }
+      if (inEntry) html += `</ul>`;
+      html += `</div>`;
+    } else {
+      i++;
+    }
+  }
+
+  document.getElementById('tailor-preview').innerHTML = html;
+}
+
+async function generateTailored(jobId) {
+  const loading   = document.getElementById('tailor-loading');
+  const body      = document.getElementById('tailor-body');
+  const errEl     = document.getElementById('tailor-error');
+  const toggleBtn = document.getElementById('tailor-toggle-btn');
 
   loading.style.display = 'flex';
-  textarea.style.display = 'none';
-  errEl.style.display = 'none';
+  body.style.display    = 'none';
+  errEl.style.display   = 'none';
 
   try {
     const res  = await fetch(`/tailor/${jobId}`, { method: 'POST' });
     const data = await res.json();
     if (data.error) throw new Error(data.error);
-    textarea.value = data.tailored;
+    document.getElementById('tailor-text').value = data.tailored;
+    renderResumePreview(data.tailored);
+    document.getElementById('tailor-preview').style.display = 'block';
+    document.getElementById('tailor-text').style.display    = 'none';
+    body.classList.remove('dark-edit');
+    body.style.display    = 'block';
+    toggleBtn.style.display = 'block';
   } catch (e) {
     errEl.textContent = `Error: ${e.message}`;
     errEl.style.display = 'block';
   } finally {
     loading.style.display = 'none';
-    textarea.style.display = 'block';
   }
 }
 
