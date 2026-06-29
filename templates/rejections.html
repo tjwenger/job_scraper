@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rejection Notes — Job Scraper</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, sans-serif; background: #0f1117; color: #e2e8f0; padding: 2rem; }
+  a { color: #60a5fa; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  header { display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem; }
+  header h1 { font-size: 1.25rem; font-weight: 700; }
+
+  .intro { background: #1e2130; border: 1px solid #2d3352; border-radius: .5rem; padding: 1rem 1.25rem; margin-bottom: 1.5rem; font-size: .875rem; color: #94a3b8; line-height: 1.6; }
+  .intro strong { color: #e2e8f0; }
+
+  table { width: 100%; border-collapse: collapse; font-size: .875rem; }
+  thead th { background: #1a1d2e; color: #94a3b8; text-align: left; padding: .6rem .75rem; font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; border-bottom: 1px solid #2d3352; }
+  tbody tr { border-bottom: 1px solid #1e2130; }
+  tbody tr:hover { background: #1a1d2e; }
+  td { padding: .65rem .75rem; vertical-align: top; }
+
+  .note { color: #fcd34d; font-style: italic; }
+  .status-declined { color: #f87171; }
+  .status-rejected { color: #fca5a5; }
+  .source { color: #64748b; font-size: .8rem; }
+  .empty { text-align: center; padding: 3rem; color: #64748b; }
+</style>
+</head>
+<body>
+
+<header>
+  <a href="/">← Back to dashboard</a>
+  <h1>Rejection Notes</h1>
+  <span style="color:#64748b;font-size:.875rem">{{ notes|length }} entries</span>
+</header>
+
+<div class="intro">
+  <strong>How to use this page:</strong> Review patterns in the notes below to identify gaps in the scraper's
+  <code>EXCLUDE_KEYWORDS</code> list or source-level filters. Common themes (e.g. "not a tech company",
+  "requires clearance", "non-engineering leadership") can be added to <code>config.py</code> to prevent
+  similar results appearing in future scrapes.
+</div>
+
+{% if notes %}
+<table>
+  <thead>
+    <tr>
+      <th>Title</th>
+      <th>Company</th>
+      <th>Source</th>
+      <th>Status</th>
+      <th>Your note</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for job in notes %}
+    <tr>
+      <td>{{ job.title }}</td>
+      <td>{{ job.company }}</td>
+      <td class="source">{{ job.source }}</td>
+      <td class="status-{{ job.status }}">{{ job.status }}</td>
+      <td class="note">{{ job.notes }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="empty">No rejection notes yet. Decline jobs from the dashboard and add a reason — they'll appear here.</p>
+{% endif %}
+
+</body>
+</html>

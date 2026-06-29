@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Job Scraper Dashboard</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; }
+  a { color: #60a5fa; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  header { background: #1e2130; border-bottom: 1px solid #2d3352; padding: 1rem 2rem; display: flex; align-items: center; gap: 1rem; }
+  header h1 { font-size: 1.25rem; font-weight: 700; color: #f1f5f9; }
+  header .badge { background: #3b82f6; color: #fff; border-radius: 999px; padding: 2px 10px; font-size: .75rem; }
+
+  .layout { display: grid; grid-template-columns: 280px 1fr; height: calc(100vh - 57px); overflow: hidden; }
+
+  .sidebar { background: #1a1d2e; border-right: 1px solid #2d3352; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 1.5rem; }
+  .sidebar h2 { font-size: .7rem; text-transform: uppercase; letter-spacing: .1em; color: #64748b; margin-bottom: .5rem; }
+
+  .scrape-form select, .scrape-form input, .scrape-form button { width: 100%; padding: .5rem .75rem; border-radius: .375rem; border: 1px solid #2d3352; background: #0f1117; color: #e2e8f0; font-size: .875rem; margin-bottom: .5rem; }
+  .scrape-form button { background: #3b82f6; border-color: #3b82f6; color: #fff; cursor: pointer; font-weight: 600; }
+  .scrape-form button:hover { background: #2563eb; }
+
+  .filter-form input, .filter-form select { width: 100%; padding: .5rem .75rem; border-radius: .375rem; border: 1px solid #2d3352; background: #0f1117; color: #e2e8f0; font-size: .875rem; margin-bottom: .5rem; }
+  .filter-form button { width: 100%; padding: .4rem; border-radius: .375rem; border: 1px solid #3b82f6; background: transparent; color: #3b82f6; cursor: pointer; font-size: .875rem; }
+  .filter-form button:hover { background: #1e3a5f; }
+
+  .kw-list { display: flex; flex-wrap: wrap; gap: .3rem; }
+  .kw-tag { background: #1e3a5f; border: 1px solid #3b82f6; color: #93c5fd; border-radius: .25rem; padding: 2px 8px; font-size: .75rem; }
+
+  .log-entry { font-size: .75rem; padding: .35rem 0; border-bottom: 1px solid #2d3352; }
+  .log-entry .src { color: #94a3b8; font-weight: 600; }
+  .log-entry .new { color: #34d399; }
+  .log-entry .err { color: #f87171; }
+
+  .main { overflow-y: auto; padding: 1.25rem; }
+  .stats { display: flex; gap: 1rem; margin-bottom: 1rem; }
+  .stat { background: #1e2130; border: 1px solid #2d3352; border-radius: .5rem; padding: .75rem 1.25rem; }
+  .stat .val { font-size: 1.5rem; font-weight: 700; color: #60a5fa; }
+  .stat .lbl { font-size: .75rem; color: #64748b; }
+
+  .scraping-banner { background: #1e3a5f; border: 1px solid #3b82f6; border-radius: .5rem; padding: .75rem 1rem; margin-bottom: 1rem; color: #93c5fd; font-size: .875rem; }
+
+  table { width: 100%; border-collapse: collapse; font-size: .875rem; }
+  thead th { background: #1a1d2e; color: #94a3b8; text-align: left; padding: .6rem .75rem; font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; border-bottom: 1px solid #2d3352; position: sticky; top: 0; }
+  tbody tr { border-bottom: 1px solid #1e2130; transition: background .1s; }
+  tbody tr:hover { background: #1a1d2e; }
+  td { padding: .65rem .75rem; vertical-align: middle; }
+
+  .source-badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: .7rem; font-weight: 600; }
+  .src-linkedin     { background: #0c2d4f; color: #60a5fa; }
+  .src-greenhouse   { background: #1a2f1a; color: #86efac; }
+  .src-remoteok     { background: #065f46; color: #6ee7b7; }
+  .src-weworkremotely { background: #1e3a5f; color: #93c5fd; }
+  .src-hackernews   { background: #7c2d12; color: #fdba74; }
+  .src-indeed       { background: #312e81; color: #a5b4fc; }
+  .src-glassdoor    { background: #14532d; color: #86efac; }
+
+  .status-select { background: #0f1117; border: 1px solid #2d3352; color: #e2e8f0; border-radius: .25rem; padding: 3px 6px; font-size: .75rem; cursor: pointer; }
+  .status-new        { border-color: #64748b; }
+  .status-applied    { border-color: #3b82f6; color: #93c5fd; }
+  .status-interested { border-color: #f59e0b; color: #fcd34d; }
+  .status-rejected   { border-color: #ef4444; color: #fca5a5; }
+  .status-ignored    { border-color: #374151; color: #6b7280; }
+  .status-declined   { border-color: #7f1d1d; color: #fca5a5; }
+
+  .btn-decline { background: transparent; border: 1px solid #7f1d1d; color: #f87171; border-radius: .25rem; padding: 3px 8px; font-size: .75rem; cursor: pointer; }
+  .btn-decline:hover { background: #7f1d1d; color: #fff; }
+  .show-declined-toggle { font-size: .8rem; color: #64748b; display: flex; align-items: center; gap: .4rem; cursor: pointer; }
+  .note-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #f59e0b; margin-left: 5px; cursor: help; vertical-align: middle; }
+
+  /* Decline modal */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 100; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: #1e2130; border: 1px solid #2d3352; border-radius: .5rem; padding: 1.5rem; width: 420px; max-width: 95vw; }
+  .modal h3 { font-size: 1rem; margin-bottom: .25rem; color: #f1f5f9; }
+  .modal p  { font-size: .8rem; color: #64748b; margin-bottom: .75rem; }
+  .modal textarea { width: 100%; background: #0f1117; border: 1px solid #2d3352; border-radius: .375rem; color: #e2e8f0; padding: .5rem .75rem; font-size: .875rem; resize: vertical; min-height: 80px; }
+  .modal-actions { display: flex; gap: .5rem; margin-top: .75rem; justify-content: flex-end; }
+  .modal-actions button { padding: .4rem .9rem; border-radius: .375rem; font-size: .875rem; cursor: pointer; border: none; }
+  .btn-confirm { background: #7f1d1d; color: #fca5a5; }
+  .btn-confirm:hover { background: #991b1b; }
+  .btn-cancel  { background: #1e2130; border: 1px solid #2d3352 !important; color: #94a3b8; }
+  .btn-cancel:hover { background: #2d3352; }
+
+  .pagination { display: flex; align-items: center; gap: .5rem; margin-top: 1rem; justify-content: flex-end; }
+  .pagination a, .pagination span { padding: .4rem .75rem; border-radius: .375rem; border: 1px solid #2d3352; font-size: .875rem; }
+  .pagination a { color: #60a5fa; }
+  .pagination a:hover { background: #1e2130; text-decoration: none; }
+  .pagination span { color: #64748b; }
+  .pagination .current { background: #1e3a5f; border-color: #3b82f6; color: #93c5fd; }
+
+  .company { color: #94a3b8; font-size: .8rem; }
+  .location { color: #64748b; font-size: .8rem; }
+  .salary { color: #34d399; font-size: .8rem; font-weight: 600; }
+  .posted { color: #64748b; font-size: .75rem; }
+
+  .score-badge { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 22px; border-radius: .25rem; font-size: .75rem; font-weight: 700; }
+  .score-great  { background: #064e3b; color: #34d399; }
+  .score-good   { background: #1e3a5f; color: #60a5fa; }
+  .score-ok     { background: #3b2f0a; color: #fbbf24; }
+  .score-weak   { background: #3b1010; color: #f87171; }
+  .score-none   { background: #1e2130; color: #475569; font-size: .65rem; }
+  .score-reason { font-size: .72rem; color: #64748b; max-width: 260px; line-height: 1.3; }
+
+  /* Company size badges — sweet spot = green, ok = blue, large = yellow, unknown = gray */
+  .size-badge { display: inline-block; padding: 2px 7px; border-radius: .25rem; font-size: .72rem; font-weight: 600; white-space: nowrap; }
+  .size-sweet  { background: #064e3b; color: #34d399; }   /* 100–500: sweet spot */
+  .size-good   { background: #1e3a5f; color: #60a5fa; }   /* 500–1000: works */
+  .size-small  { background: #3b2f0a; color: #fbbf24; }   /* <100: startup — preferred over large */
+  .size-large  { background: #3b1010; color: #f87171; }   /* 1000+: right opportunity needed */
+  .size-none   { background: #1e2130; color: #475569; font-size: .65rem; }
+
+  /* Scrape-in-progress state */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner { display: inline-block; width: 13px; height: 13px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle; margin-right: 5px; }
+  .scrape-running-banner { display: flex; align-items: center; gap: .6rem; background: #1e3a5f; border: 1px solid #3b82f6; border-radius: .5rem; padding: .65rem 1rem; margin-bottom: 1rem; color: #93c5fd; font-size: .875rem; }
+  .scrape-running-banner .elapsed { margin-left: auto; font-size: .75rem; color: #475569; }
+  button.scraping { opacity: .7; pointer-events: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Job Scraper</h1>
+  <span class="badge">{{ total }} jobs</span>
+</header>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+
+    <!-- Run scraper -->
+    <div>
+      <h2>Run Scraper</h2>
+      <form class="scrape-form" id="scrape-form" method="post" action="/scrape">
+        <select name="scraper">
+          <option value="all">All sources</option>
+          {% for s in all_scrapers %}
+          <option value="{{ s }}">{{ s }}</option>
+          {% endfor %}
+        </select>
+        <input type="text" name="keywords"
+               placeholder="Override keywords (comma-sep)"
+               title="Leave blank to use config.py keywords">
+        <button type="submit" id="scrape-btn">Scrape Now</button>
+      </form>
+    </div>
+
+    <!-- Filters -->
+    <div>
+      <h2>Filter Jobs</h2>
+      <form class="filter-form" method="get" action="/">
+        <input type="text" name="search" value="{{ search }}" placeholder="Search title / company…">
+        <select name="source">
+          <option value="">All sources</option>
+          {% for s in sources %}
+          <option value="{{ s }}" {% if source == s %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+        <select name="status">
+          <option value="">All statuses</option>
+          <option value="new"        {% if status == 'new' %}selected{% endif %}>New</option>
+          <option value="interested" {% if status == 'interested' %}selected{% endif %}>Interested</option>
+          <option value="applied"    {% if status == 'applied' %}selected{% endif %}>Applied</option>
+          <option value="rejected"   {% if status == 'rejected' %}selected{% endif %}>Rejected</option>
+          <option value="ignored"    {% if status == 'ignored' %}selected{% endif %}>Ignored</option>
+          <option value="declined"   {% if status == 'declined' %}selected{% endif %}>Declined</option>
+        </select>
+        <label class="show-declined-toggle">
+          <input type="checkbox" name="show_declined" value="true" {% if show_declined %}checked{% endif %}>
+          Show declined jobs
+        </label>
+        <button type="submit" style="margin-top:.4rem">Apply Filters</button>
+      </form>
+    </div>
+
+    <!-- Active keywords -->
+    <div>
+      <h2>Active Keywords</h2>
+      <div class="kw-list">
+        {% for kw in keywords %}
+        <span class="kw-tag">{{ kw }}</span>
+        {% endfor %}
+      </div>
+      <p style="font-size:.75rem;color:#64748b;margin-top:.5rem;">Edit keywords in <code>config.py</code></p>
+    </div>
+
+    <!-- Scoring -->
+    <div>
+      <h2>Resume Scoring</h2>
+      <form method="post" action="/score-all">
+        <button type="submit" style="width:100%;padding:.5rem;border-radius:.375rem;border:1px solid #3b82f6;background:transparent;color:#60a5fa;cursor:pointer;font-size:.875rem;">Score Unscored Jobs</button>
+      </form>
+      <p style="font-size:.72rem;color:#64748b;margin-top:.4rem;">Runs automatically after each scrape if ANTHROPIC_API_KEY is set.</p>
+    </div>
+
+    <!-- Rejection review -->
+    <div>
+      <h2>Scraper Tuning</h2>
+      <a href="/rejections" style="font-size:.8rem;color:#f87171;">View rejection notes →</a>
+    </div>
+
+    <!-- Scrape log -->
+    <div>
+      <h2>Recent Scrapes</h2>
+      {% for entry in scrape_log %}
+      <div class="log-entry">
+        <span class="src">{{ entry.source }}</span>
+        <span class="new"> +{{ entry.new_jobs }}</span>
+        {% if entry.error %}<span class="err"> ⚠</span>{% endif %}
+        <br>
+        <span style="color:#475569">{{ (entry.started_at or '')[:16] }}</span>
+      </div>
+      {% else %}
+      <p style="font-size:.75rem;color:#64748b">No scrapes yet.</p>
+      {% endfor %}
+    </div>
+
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- Decline modal -->
+<div class="modal-overlay" id="decline-modal">
+  <div class="modal">
+    <h3>Why are you declining this job?</h3>
+    <p>Your note helps tune the scraper to filter similar results automatically.</p>
+    <textarea id="decline-note" placeholder="e.g. not a tech company, too junior, requires relocation…"></textarea>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-confirm" onclick="confirmDecline()">Decline</button>
+    </div>
+  </div>
+</div>
+
+    <div id="scrape-status-bar" style="display:none" class="scrape-running-banner">
+      <span class="spinner"></span>
+      <span id="scrape-status-msg">Scraping in progress…</span>
+      <span class="elapsed" id="scrape-elapsed"></span>
+    </div>
+    {% if request.query_params.get('scoring') %}
+    <div class="scraping-banner" style="border-color:#34d399;color:#34d399;">Scoring started — jobs will be ranked by fit as results come in. Refresh to see scores.</div>
+    {% endif %}
+
+    <div class="stats">
+      <div class="stat"><div class="val">{{ total }}</div><div class="lbl">Total jobs</div></div>
+    </div>
+
+    {% if jobs %}
+    <table>
+      <thead>
+        <tr>
+          <th>Fit</th>
+          <th>Title</th>
+          <th>Company</th>
+          <th>Size</th>
+          <th>Location</th>
+          <th>Salary</th>
+          <th>Source</th>
+          <th>Posted</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="job-table-body">
+        {% for job in jobs %}
+        <tr id="row-{{ job.id }}">
+          <td style="white-space:nowrap">
+            {% if job.score is not none %}
+              {% if job.score >= 80 %}
+                <span class="score-badge score-great" title="{{ job.score_reason }}">{{ job.score }}</span>
+              {% elif job.score >= 65 %}
+                <span class="score-badge score-good"  title="{{ job.score_reason }}">{{ job.score }}</span>
+              {% elif job.score >= 45 %}
+                <span class="score-badge score-ok"    title="{{ job.score_reason }}">{{ job.score }}</span>
+              {% else %}
+                <span class="score-badge score-weak"  title="{{ job.score_reason }}">{{ job.score }}</span>
+              {% endif %}
+            {% else %}
+              <span class="score-badge score-none">—</span>
+            {% endif %}
+          </td>
+          <td>
+            <a href="{{ job.url }}" target="_blank" rel="noopener">{{ job.title }}</a>
+            {% if job.notes %}<span class="note-dot" title="{{ job.notes }}"></span>{% endif %}
+            {% if job.score is not none and job.score_reason %}
+              <div class="score-reason">{{ job.score_reason }}</div>
+            {% endif %}
+          </td>
+          <td class="company">{{ job.company }}</td>
+          <td>
+            {% set sz = job.company_size %}
+            {% if sz %}
+              {% if sz >= 1000 %}
+                <span class="size-badge size-large"  title="~{{ '{:,}'.format(sz) }} employees — large; right opportunity needed">{{ '{:,}'.format(sz) }}+</span>
+              {% elif sz >= 500 %}
+                <span class="size-badge size-good"   title="~{{ '{:,}'.format(sz) }} employees — works well">{{ sz }}–1k</span>
+              {% elif sz >= 100 %}
+                <span class="size-badge size-sweet"  title="~{{ '{:,}'.format(sz) }} employees — sweet spot">{{ sz }}–500</span>
+              {% else %}
+                <span class="size-badge size-small"  title="~{{ '{:,}'.format(sz) }} employees — startup">~{{ sz }}</span>
+              {% endif %}
+            {% else %}
+              <span class="size-badge size-none">—</span>
+            {% endif %}
+          </td>
+          <td class="location">{{ job.location }}</td>
+          <td class="salary">{{ job.salary }}</td>
+          <td>
+            <span class="source-badge src-{{ job.source }}">{{ job.source }}</span>
+          </td>
+          <td class="posted">{{ (job.posted_at or job.scraped_at or '')[:10] }}</td>
+          <td>
+            <select class="status-select status-{{ job.status }}"
+                    onchange="setStatus('{{ job.id }}', this.value, this)">
+              <option value="new"        {% if job.status=='new' %}selected{% endif %}>new</option>
+              <option value="interested" {% if job.status=='interested' %}selected{% endif %}>interested</option>
+              <option value="applied"    {% if job.status=='applied' %}selected{% endif %}>applied</option>
+              <option value="rejected"   {% if job.status=='rejected' %}selected{% endif %}>rejected</option>
+              <option value="ignored"    {% if job.status=='ignored' %}selected{% endif %}>ignored</option>
+              <option value="declined"   {% if job.status=='declined' %}selected{% endif %}>declined</option>
+            </select>
+          </td>
+          <td>
+            <button class="btn-decline" onclick="declineJob('{{ job.id }}', this)" title="Decline — hide this job">✕</button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <!-- Pagination -->
+    {% set total_pages = ((total - 1) // per_page + 1) %}
+    {% if total_pages > 1 %}
+    <div class="pagination">
+      {% if page > 1 %}
+      <a href="/?page={{ page-1 }}&search={{ search }}&source={{ source }}&status={{ status }}">← Prev</a>
+      {% endif %}
+      <span class="current">{{ page }} / {{ total_pages }}</span>
+      {% if page < total_pages %}
+      <a href="/?page={{ page+1 }}&search={{ search }}&source={{ source }}&status={{ status }}">Next →</a>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <p style="color:#64748b;margin-top:2rem;text-align:center;">
+      No jobs found. Hit <strong>Scrape Now</strong> to pull listings.
+    </p>
+    {% endif %}
+
+  </main>
+</div>
+
+<script>
+async function setStatus(jobId, status, select) {
+  const fd = new FormData();
+  fd.append('status', status);
+  await fetch(`/status/${jobId}`, { method: 'POST', body: fd });
+  select.className = `status-select status-${status}`;
+  // Prompt for a note when manually setting to rejected
+  if (status === 'rejected') openModal(jobId);
+}
+
+let _pendingDeclineId = null;
+
+function openModal(jobId) {
+  _pendingDeclineId = jobId;
+  document.getElementById('decline-note').value = '';
+  document.getElementById('decline-modal').classList.add('open');
+  setTimeout(() => document.getElementById('decline-note').focus(), 50);
+}
+
+function closeModal() {
+  document.getElementById('decline-modal').classList.remove('open');
+  _pendingDeclineId = null;
+}
+
+async function confirmDecline() {
+  const jobId = _pendingDeclineId;
+  const note  = document.getElementById('decline-note').value.trim();
+  closeModal();
+
+  if (note) {
+    const fd = new FormData();
+    fd.append('notes', note);
+    await fetch(`/notes/${jobId}`, { method: 'POST', body: fd });
+  }
+
+  // Mark declined and fade the row out
+  const statusFd = new FormData();
+  statusFd.append('status', 'declined');
+  await fetch(`/status/${jobId}`, { method: 'POST', body: statusFd });
+
+  const row = document.getElementById(`row-${jobId}`);
+  if (row) {
+    row.style.transition = 'opacity .25s';
+    row.style.opacity = '0';
+    setTimeout(() => row.remove(), 260);
+  }
+}
+
+function declineJob(jobId) {
+  openModal(jobId);
+}
+
+// Close modal on overlay click
+document.getElementById('decline-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// Close on Escape
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+// --- Scrape progress polling ---
+const scrapeBtn    = document.getElementById('scrape-btn');
+const statusBar    = document.getElementById('scrape-status-bar');
+const statusMsg    = document.getElementById('scrape-status-msg');
+const elapsedEl    = document.getElementById('scrape-elapsed');
+let pollInterval   = null;
+let scrapeStart    = null;
+let wasRunning     = false;
+
+function formatElapsed(ms) {
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(s / 60);
+  return m > 0 ? `${m}m ${s % 60}s` : `${s}s`;
+}
+
+async function pollScrapeStatus() {
+  try {
+    const res  = await fetch('/api/scrape-status');
+    const data = await res.json();
+
+    if (data.running) {
+      wasRunning = true;
+      scrapeStart = scrapeStart || Date.now();
+      statusBar.style.display = 'flex';
+      scrapeBtn.classList.add('scraping');
+      scrapeBtn.innerHTML = '<span class="spinner"></span>Running…';
+      elapsedEl.textContent = formatElapsed(Date.now() - scrapeStart);
+
+      // Update message with live job count
+      statusMsg.textContent = `Scraping in progress… (${data.total} jobs so far)`;
+    } else {
+      if (wasRunning) {
+        // Scrape just finished — reload to show new results
+        clearInterval(pollInterval);
+        statusMsg.textContent = 'Scrape complete! Loading new results…';
+        elapsedEl.textContent = '';
+        setTimeout(() => window.location.href = '/', 800);
+      } else {
+        // No scrape running on page load — reset button if needed
+        scrapeBtn.classList.remove('scraping');
+        scrapeBtn.textContent = 'Scrape Now';
+        statusBar.style.display = 'none';
+      }
+    }
+  } catch (_) { /* network error — keep polling */ }
+}
+
+// Start polling immediately on page load, then every 3 seconds
+pollScrapeStatus();
+pollInterval = setInterval(pollScrapeStatus, 3000);
+
+// When form is submitted, mark running state immediately before redirect
+document.getElementById('scrape-form').addEventListener('submit', () => {
+  scrapeStart = Date.now();
+  wasRunning  = true;
+  scrapeBtn.classList.add('scraping');
+  scrapeBtn.innerHTML = '<span class="spinner"></span>Starting…';
+});
+</script>
+</body>
+</html>

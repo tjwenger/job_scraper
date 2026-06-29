@@ -1,0 +1,5 @@
+.env
+jobs.db
+resume.txt
+__pycache__/
+*.pyc
