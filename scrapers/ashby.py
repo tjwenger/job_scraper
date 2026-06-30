@@ -10,21 +10,23 @@ import time
 from config import KEYWORDS, EXCLUDE_KEYWORDS, USER_AGENT
 
 ASHBY_COMPANIES = [
-    # Security / Identity
-    "1password", "snyk", "lacework", "orca-security",
-    # Dev tools / Infrastructure
-    "linear", "vercel", "railway", "fly", "depot", "dagger",
-    "modal", "neon", "turso", "trigger",
-    # Data / AI
-    "cohere", "mistral", "together-ai", "baseten", "weights-and-biases",
-    "langchain", "llamaindex", "vellum", "humanloop",
+    # AI / ML
+    "openai", "perplexity", "character", "anyscale", "modal",
+    "midjourney", "runway", "deepgram", "cohere", "baseten",
+    "langchain", "llamaindex", "vellum",
+    # Dev Tools / Infrastructure
+    "linear", "vercel", "railway", "depot", "neon", "supabase",
+    "render", "inngest", "temporal", "sentry", "semgrep",
+    # Data / Analytics
+    "prefect", "airbyte", "confluent", "amplitude",
     # Fintech / Payments
-    "mercury", "ramp", "brex", "rippling", "deel", "remote",
+    "mercury", "ramp", "deel", "plaid", "kraken", "marqeta", "zapier",
     # Productivity / Collaboration
-    "notion", "loom", "pitch", "superhuman", "craft",
+    "notion", "loom", "miro", "superhuman", "n8n",
+    # Security / Identity
+    "1password", "snyk", "wiz", "workos",
     # Other growth-stage tech
-    "ashby", "dbt-labs", "prefect", "dagster", "airbyte",
-    "posthog", "highlight", "incident-io", "pagerduty",
+    "posthog", "ashby", "benchling", "strava",
 ]
 
 DELAY_SECONDS = 0.3

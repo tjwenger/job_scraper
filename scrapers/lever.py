@@ -19,27 +19,25 @@ _US_STATE_RE = re.compile(
 )
 
 GREENHOUSE_COMPANIES = [
-    # Payments / Fintech
-    "stripe", "brex", "ramp", "plaid", "carta", "gusto", "mercury",
-    # Productivity / Collaboration
-    "airtable", "miro", "retool", "loom", "figma", "notion",
+    # AI / ML
+    "anthropic", "imbue", "assemblyai",
     # Infrastructure / DevTools
-    "vercel", "cloudflare", "fastly", "netlify", "hashicorp",
-    "elastic", "confluent", "mongodb", "cockroachlabs", "planetscale",
-    "snyk", "launchdarkly", "pagerduty", "datadog",
+    "vercel", "elastic", "mongodb", "cockroachlabs", "planetscale",
+    "launchdarkly", "datadog", "encore", "gitlab",
     # Data / Analytics
     "databricks", "fivetran", "amplitude", "mixpanel",
-    "segment", "hightouch", "hex-inc", "modeanalytics", "algolia",
-    # AI / ML
-    "scale", "cohere",
+    "hightouch", "algolia",
+    # Payments / Fintech
+    "stripe", "brex", "carta", "gusto", "mercury",
+    "chime", "robinhood", "coinbase", "marqeta", "make",
+    # Productivity / Collaboration
+    "airtable", "figma", "airbnb", "instacart",
     # HR / People Ops
-    "deel", "lattice", "rippling",
+    "lattice", "okta",
     # Marketing / CX
-    "braze", "klaviyo", "intercom", "contentful", "zendesk",
-    # Security
-    "lacework", "orca-security", "wiz",
+    "braze", "klaviyo", "intercom", "contentful",
     # Other growth-stage tech
-    "benchling", "ironclad", "dbtlabs",
+    "ironclad",
 ]
 
 DELAY_SECONDS = 0.3
