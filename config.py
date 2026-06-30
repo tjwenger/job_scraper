@@ -95,7 +95,7 @@ KEYWORDS, EXCLUDE_KEYWORDS = _load()
 SCRAPE_INTERVAL_MINUTES = 120
 
 # Max pages to scrape per source per run (keeps runtime short)
-MAX_PAGES_PER_SOURCE = 3
+MAX_PAGES_PER_SOURCE = 5
 
 # User-agent header used for HTTP requests
 USER_AGENT = (

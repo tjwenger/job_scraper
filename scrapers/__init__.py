@@ -4,10 +4,12 @@ from .hackernews import scrape_hackernews
 from .glassdoor import scrape_glassdoor
 from .linkedin import scrape_linkedin
 from .lever import scrape_lever
+from .ashby import scrape_ashby
 
 ALL_SCRAPERS = {
     "linkedin": scrape_linkedin,
     "greenhouse": scrape_lever,
+    "ashby": scrape_ashby,
     "glassdoor": scrape_glassdoor,
     "remoteok": scrape_remoteok,
     "weworkremotely": scrape_wwr,

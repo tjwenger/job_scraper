@@ -48,9 +48,12 @@ PRIORITY_TERMS = [
     "VP of Engineering",
     "Vice President Engineering",
     "Director of Engineering",
+    "Senior Director of Engineering",
     "Senior Director Engineering",
     "VP Technology",
     "Director of Technology",
+    "VP Software Engineering",
+    "Director of Software Engineering",
 ]
 
 _HEADERS = {
