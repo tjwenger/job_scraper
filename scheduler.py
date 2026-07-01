@@ -13,35 +13,38 @@ MAX_AGE_DAYS = 30
 # Post-scrape filters — applied to every job from every scraper
 # ---------------------------------------------------------------------------
 
-# Onsite/hybrid filtering lives in scrapers/filters.py so every source — and
-# this central gate — applies the exact same positive-remote logic.
-from scrapers.filters import is_remote_ok
+# Onsite/hybrid + software-role filtering live in scrapers/filters.py so every
+# source — and this central gate — applies the exact same logic.
+from scrapers.filters import is_remote_ok, is_software_role
 
-# Non-tech industries — matched against title + company + description
+# Non-tech industries — matched against title + company + description.
+# NOTE: no trailing \b on the group so stems match inflections
+# (manufactur -> manufacturing, underwrit -> underwriting).
 _NON_TECH_RE = re.compile(
     r"\b("
     # Healthcare / medical
     r"hospital|health\s*system|health\s*plan|clinic|medical center|physician"
-    r"|nursing|dental|pharmacy|pharma(ceutical)?|biotech(?! software)|genomics"
+    r"|nursing|dental|pharmacy|pharmaceutic|genomics"
     r"|patient care|clinical trial|ehr|epic systems"
     # Financial services (non-fintech)
-    r"|bank(?:ing)?|credit union|mortgage|insurance(?! software| tech| platform)"
-    r"|wealth management|asset management|brokerage|underwriting|actuarial"
+    r"|banking|credit union|mortgage|insurance(?! software| tech| platform)"
+    r"|wealth management|asset management|brokerage|underwrit|actuarial"
     r"|financial advisor|investment bank|hedge fund|private equity"
     # Retail / CPG / Food
     r"|retail chain|grocery|supermarket|restaurant|food service|hospitality"
     r"|hotel|resort|casino|travel agency"
     # Industrial / Manufacturing / Energy
     r"|manufactur|automotive|aerospace|defense contractor|oil\s*&?\s*gas"
-    r"|utilities|power plant|mining|agriculture|farming"
+    r"|utilities|power plant|mining|agricultur|farming"
     # Government / Nonprofit / Education
     r"|government|federal agency|dept\. of|department of (defense|labor|energy)"
     r"|non[\-\s]?profit|school district|k[\-\s]?12|university hospital"
-    r")\b",
+    r")",
     re.IGNORECASE,
 )
 
-# Explicit tech-company signals in the description that override _NON_TECH_RE
+# Explicit tech-company signals that override _NON_TECH_RE (e.g. "software for
+# the insurance industry" should stay).
 _TECH_OVERRIDE_RE = re.compile(
     r"\b(saas|software platform|api|cloud platform|developer platform"
     r"|series [a-e]|venture[\-\s]backed|seed[\-\s]funded|fintech|insurtech"
@@ -65,15 +68,15 @@ def _is_non_tech(job: dict) -> bool:
 
 def _passes_filters(job: dict) -> bool:
     """Central post-scrape gate. Returns False to drop the job."""
+    log = logging.getLogger(__name__)
     if not is_remote_ok(job):
-        logging.getLogger(__name__).debug(
-            "Dropped (onsite/hybrid): %s @ %s", job.get("title"), job.get("company")
-        )
+        log.debug("Dropped (onsite/hybrid): %s @ %s", job.get("title"), job.get("company"))
+        return False
+    if not is_software_role(job):
+        log.debug("Dropped (non-software engineering): %s @ %s", job.get("title"), job.get("company"))
         return False
     if _is_non_tech(job):
-        logging.getLogger(__name__).debug(
-            "Dropped (non-tech industry): %s @ %s", job.get("title"), job.get("company")
-        )
+        log.debug("Dropped (non-tech industry): %s @ %s", job.get("title"), job.get("company"))
         return False
     return True
 

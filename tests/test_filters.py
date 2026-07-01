@@ -9,7 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from scrapers.filters import is_remote_ok  # noqa: E402
+from scrapers.filters import is_remote_ok, is_software_role  # noqa: E402
 
 
 # (label, job, expected_keep)
@@ -75,19 +75,63 @@ CASES = [
 ]
 
 
+# (label, job, expected_is_software)
+SOFTWARE_CASES = [
+    ("Proof — industrial/process eng (battery plant), title says Engineering",
+     {"title": "Senior Director of Engineering", "company": "Proof",
+      "location": "United States",
+      "description": "Industries: Mining and Chemical Manufacturing | Job function: Engineering\n\n"
+                     "Advanced Materials Manufacturing. Lead scale-up of industrial manufacturing "
+                     "facilities, process manufacturing, capital projects with EPC/EPCM partners and "
+                     "process engineering teams."},
+     False),
+    ("Mechanical engineering leadership",
+     {"title": "Director of Engineering", "company": "Acme Motors",
+      "location": "Remote",
+      "description": "Lead our mechanical engineering and manufacturing teams building automotive "
+                     "powertrains. Oversee assembly line and production facilities."},
+     False),
+    ("Genuine software role",
+     {"title": "Director of Engineering", "company": "Stripe",
+      "location": "Remote",
+      "description": "Lead backend engineering teams building our payments API. Microservices, "
+                     "Kubernetes, AWS, distributed systems, CI/CD."},
+     True),
+    ("Software FOR manufacturing (must stay)",
+     {"title": "VP of Engineering", "company": "Tulip",
+      "location": "Remote",
+      "description": "We build a SaaS cloud platform for manufacturing operations. Lead our full-stack "
+                     "software engineering team — React, Node.js, Kubernetes."},
+     True),
+    ("No domain signal either way (benefit of the doubt)",
+     {"title": "VP of Engineering", "company": "Acme",
+      "location": "Remote", "description": "Lead a high-performing engineering organization."},
+     True),
+]
+
+
 def run():
     failures = 0
+    print("=== is_remote_ok ===")
     for label, job, expected in CASES:
         got = is_remote_ok(job)
         ok = got == expected
         if not ok:
             failures += 1
         print(f"[{'OK' if ok else 'FAIL'}] keep={got} (expected {expected}) — {label}")
+    print("\n=== is_software_role ===")
+    for label, job, expected in SOFTWARE_CASES:
+        got = is_software_role(job)
+        ok = got == expected
+        if not ok:
+            failures += 1
+        print(f"[{'OK' if ok else 'FAIL'}] software={got} (expected {expected}) — {label}")
     print()
+    total = len(CASES) + len(SOFTWARE_CASES)
     if failures:
         print(f"{failures} FAILURE(S)")
         return 1
-    print(f"All {len(CASES)} cases passed.")
+    print(f"All {total} cases passed.")
     return 0
 
 
@@ -98,6 +142,10 @@ try:
     @pytest.mark.parametrize("label,job,expected", CASES, ids=[c[0] for c in CASES])
     def test_is_remote_ok(label, job, expected):
         assert is_remote_ok(job) is expected
+
+    @pytest.mark.parametrize("label,job,expected", SOFTWARE_CASES, ids=[c[0] for c in SOFTWARE_CASES])
+    def test_is_software_role(label, job, expected):
+        assert is_software_role(job) is expected
 except ImportError:
     pass
 

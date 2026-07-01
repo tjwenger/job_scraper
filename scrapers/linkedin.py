@@ -69,8 +69,21 @@ def _fetch_description(job_id: str, client: httpx.Client) -> str:
         if resp.status_code != 200:
             return ""
         soup = BeautifulSoup(resp.text, "html.parser")
+
+        # Prepend the job criteria (esp. Industries + Job function) — these are
+        # strong domain signals for the software-role filter. e.g. a role tagged
+        # "Industries: Mining and Chemical Manufacturing" is not software.
+        criteria = []
+        for li in soup.select("li.description__job-criteria-item"):
+            h = li.select_one(".description__job-criteria-subheader")
+            v = li.select_one(".description__job-criteria-text")
+            if h and v:
+                criteria.append(f"{h.get_text(strip=True)}: {v.get_text(strip=True)}")
+        prefix = (" | ".join(criteria) + "\n\n") if criteria else ""
+
         desc_el = soup.select_one(".description__text, .show-more-less-html__markup")
-        return desc_el.get_text(" ", strip=True) if desc_el else soup.get_text(" ", strip=True)
+        body = desc_el.get_text(" ", strip=True) if desc_el else soup.get_text(" ", strip=True)
+        return prefix + body
     except Exception:
         return ""
 

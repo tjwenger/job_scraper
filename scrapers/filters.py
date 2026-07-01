@@ -77,6 +77,67 @@ def _has_strong_remote(text: str, location: str) -> bool:
     return False
 
 
+# ---------------------------------------------------------------------------
+# Software-role gate — reject "Engineering" leadership roles that are actually
+# physical/industrial engineering (process, mechanical, civil, manufacturing…)
+# rather than software. Job titles overlap heavily ("Director of Engineering"
+# means very different things at a battery plant vs. a SaaS company), so we
+# judge on domain signals in the text, not the title.
+# ---------------------------------------------------------------------------
+
+# Physical / non-software engineering & industry domains → disqualifying.
+# NOTE: no trailing \b so stems match inflections (manufactur -> manufacturing).
+_PHYSICAL_ENG_RE = re.compile(
+    r"\b("
+    r"process engineer|mechanical engineer|civil engineer|chemical engineer"
+    r"|electrical engineer|industrial engineer|structural engineer"
+    r"|manufactur|materials science|metallurg|refiner|petrochemical"
+    r"|epc|epcm|commissioning|capital project|process manufactur"
+    r"|plant (manager|engineer|operations)|production facilit|industrial facilit"
+    r"|assembly line|supply chain manufactur|hvac|piping|welding"
+    r"|automotive|aerospace|oil\s*&?\s*gas|mining|drilling|construction"
+    r"|semiconductor fab|foundry|hardware manufactur|circuit board|pcb"
+    r")",
+    re.IGNORECASE,
+)
+
+# Positive software-engineering signals → keeps the role even if a physical
+# term appears incidentally (e.g. "software for manufacturing plants").
+_SOFTWARE_RE = re.compile(
+    r"\b("
+    r"software|saas|web (app|application|platform)|cloud|api\b|backend|back[\-\s]end"
+    r"|frontend|front[\-\s]end|full[\-\s]stack|micro[\-\s]?service|kubernetes|docker"
+    r"|devops|ci/cd|codebase|source code|programming|developer|engineering team"
+    r"|python|java(script)?|golang|typescript|react|node\.?js|aws|gcp|azure"
+    r"|data (platform|pipeline|engineering)|machine learning|\bml\b|\bai\b|llm"
+    r"|distributed systems|scalab|application development|mobile app|platform engineering"
+    r")\b",
+    re.IGNORECASE,
+)
+
+
+def is_software_role(job: dict) -> bool:
+    """Return True if the role appears to be software engineering.
+
+    Drops physical/industrial engineering roles that share the same titles.
+    A job is kept (True) when either:
+      - it shows a software signal, OR
+      - it shows no physical-engineering signal at all (benefit of the doubt).
+    It is rejected (False) only when a physical-engineering signal is present
+    AND there is no software signal to counter it.
+    """
+    haystack = " ".join([
+        job.get("title", ""),
+        job.get("company", ""),
+        (job.get("description", "") or "")[:2500],
+    ])
+    physical = bool(_PHYSICAL_ENG_RE.search(haystack))
+    if not physical:
+        return True  # nothing disqualifying → keep
+    software = bool(_SOFTWARE_RE.search(haystack))
+    return software  # physical present → keep only if software also present
+
+
 def is_remote_ok(job: dict) -> bool:
     """Return True if the job should be kept (genuinely remote-eligible)."""
     desc = job.get("description", "") or ""
