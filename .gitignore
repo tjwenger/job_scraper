@@ -1,5 +1,12 @@
 .env
 jobs.db
 resume.txt
+keywords.json
 __pycache__/
 *.pyc
+
+# Editor / tooling
+.claude/
+
+# Unrelated project folder
+personalSite/
