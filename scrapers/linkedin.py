@@ -22,25 +22,9 @@ DETAIL_URL  = "https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{job_id}"
 RESULTS_PER_PAGE = 25
 DELAY_SECONDS    = 2.0
 
-# Patterns that signal a role is NOT remote-eligible.
-# Any match in the description → job is dropped.
-_ONSITE_RE = re.compile(
-    r"\b("
-    r"hybrid|on[\s\-]?site|onsite|in[\s\-]?office|in the office"
-    r"|must be (located|based|present|available) in"
-    r"|required to (be in|report to|work (from|at|in)) (the )?(office|headquarters|hq)"
-    r"|relocation (required|package|assistance)"
-    r"|days? (per|a|each) week (in|at) (the )?(office|hq)"
-    r")\b",
-    re.IGNORECASE,
-)
-
-# Presence of any of these overrides an onsite signal (e.g. "hybrid remote").
-_REMOTE_RE = re.compile(
-    r"\b(fully remote|100%\s*remote|remote[\s\-]first|remote[\s\-]friendly"
-    r"|work from (home|anywhere)|distributed team)\b",
-    re.IGNORECASE,
-)
+# Onsite/hybrid filtering lives in scrapers/filters.py (shared with the
+# scheduler) so every source applies the exact same positive-remote gate.
+from .filters import is_remote_ok
 
 # Deduplicate by grouping similar keywords so we don't hammer LinkedIn
 # with 20 separate queries. We pick the most distinct search terms.
@@ -65,8 +49,12 @@ _HEADERS = {
 
 
 def _job_id_from_url(url: str) -> str | None:
-    """Extract numeric job ID from a LinkedIn jobs/view URL."""
-    m = re.search(r"/jobs/view/(\d+)", url)
+    """Extract numeric job ID from a LinkedIn jobs/view URL.
+
+    URLs are slug-based — the numeric ID is the trailing run of digits, e.g.
+    /jobs/view/director-of-engineering-at-ideal-aerosmith-inc-4431764370
+    """
+    m = re.search(r"(\d{6,})(?:[/?#]|$)", url)
     return m.group(1) if m else None
 
 
@@ -85,15 +73,6 @@ def _fetch_description(job_id: str, client: httpx.Client) -> str:
         return desc_el.get_text(" ", strip=True) if desc_el else soup.get_text(" ", strip=True)
     except Exception:
         return ""
-
-
-def _is_onsite(description: str) -> bool:
-    """Return True if the description signals an on-site or hybrid requirement."""
-    if not description:
-        return False  # no description → benefit of the doubt
-    if _REMOTE_RE.search(description):
-        return False  # explicit remote language overrides onsite signals
-    return bool(_ONSITE_RE.search(description))
 
 
 def _search(keyword: str, start: int, client: httpx.Client) -> list[dict]:
@@ -197,10 +176,12 @@ def scrape_linkedin(keywords: list[str] | None = None) -> list[dict]:
             else:
                 description = ""
 
-            if _is_onsite(description):
+            job["description"] = description[:2000]
+
+            # Positive-remote gate — keep only genuinely remote-eligible roles.
+            if not is_remote_ok(job):
                 continue
 
-            job["description"] = description[:2000]
             all_jobs.append(job)
 
     return all_jobs

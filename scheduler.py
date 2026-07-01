@@ -13,28 +13,9 @@ MAX_AGE_DAYS = 30
 # Post-scrape filters — applied to every job from every scraper
 # ---------------------------------------------------------------------------
 
-# Signals that a role is onsite or hybrid (matched against full description)
-_ONSITE_RE = re.compile(
-    r"("
-    r"\bon[\-\s]?site\b|\bonsite\b"
-    r"|\bin[\-\s]office\b"
-    r"|\bhybrid\b"
-    r"|must be (located|based|present) in"
-    r"|\brelocation (required|assistance|package)\b"
-    r"|\d+\s*days?\s*(per week|a week|\/week|in[\-\s]?office)"
-    r"|\breport(s|ing)? (to|into) (our|the) (office|hq|headquarters)\b"
-    r")",
-    re.IGNORECASE,
-)
-
-# Remote signals that override onsite matches
-_REMOTE_RE = re.compile(
-    r"\b("
-    r"fully remote|100\s*%\s*remote|remote[\-\s]first|remote[\-\s]only"
-    r"|work from anywhere|distributed team|work from home"
-    r")\b",
-    re.IGNORECASE,
-)
+# Onsite/hybrid filtering lives in scrapers/filters.py so every source — and
+# this central gate — applies the exact same positive-remote logic.
+from scrapers.filters import is_remote_ok
 
 # Non-tech industries — matched against title + company + description
 _NON_TECH_RE = re.compile(
@@ -69,26 +50,6 @@ _TECH_OVERRIDE_RE = re.compile(
 )
 
 
-def _is_onsite(job: dict) -> bool:
-    """True if the job looks onsite/hybrid and has no strong remote override."""
-    # LinkedIn already does its own per-description check; trust its output
-    if job.get("source") == "linkedin":
-        return False
-    desc = job.get("description", "")
-    loc = job.get("location", "").lower()
-    # Strong remote signals in description always win
-    if desc and _REMOTE_RE.search(desc):
-        return False
-    # Onsite signal in description overrides location label
-    if desc and _ONSITE_RE.search(desc):
-        return True
-    # No description — fall back to location label
-    if not desc:
-        onsite_locs = ("on-site", "onsite", "in-office", "hybrid")
-        return any(r in loc for r in onsite_locs)
-    return False
-
-
 def _is_non_tech(job: dict) -> bool:
     """True if the job appears to be at a non-technology company."""
     haystack = " ".join([
@@ -104,7 +65,7 @@ def _is_non_tech(job: dict) -> bool:
 
 def _passes_filters(job: dict) -> bool:
     """Central post-scrape gate. Returns False to drop the job."""
-    if _is_onsite(job):
+    if not is_remote_ok(job):
         logging.getLogger(__name__).debug(
             "Dropped (onsite/hybrid): %s @ %s", job.get("title"), job.get("company")
         )
