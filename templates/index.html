@@ -47,6 +47,16 @@
   thead th { background: #1a1d2e; color: #94a3b8; text-align: left; padding: .6rem .75rem; font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; border-bottom: 1px solid #2d3352; position: sticky; top: 0; }
   tbody tr { border-bottom: 1px solid #1e2130; transition: background .1s; }
   tbody tr:hover { background: #1a1d2e; }
+  thead th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+  thead th.sortable:hover { color: #e2e8f0; }
+  thead th.sortable::after { content: "↕"; opacity: .3; margin-left: .35rem; font-size: .85em; }
+  thead th.sort-asc::after  { content: "↑"; opacity: 1; }
+  thead th.sort-desc::after { content: "↓"; opacity: 1; }
+  .table-toolbar { display: flex; align-items: center; gap: 1.25rem; margin: 0 0 .6rem; font-size: .8rem; color: #94a3b8; }
+  .table-toolbar label { display: flex; align-items: center; gap: .4rem; cursor: pointer; }
+  .table-toolbar input[type="number"] { background: #0f1117; border: 1px solid #2d3352; color: #f1f5f9; border-radius: .375rem; padding: .25rem .4rem; font-size: .8rem; }
+  .table-toolbar input[type="number"]:focus { outline: none; border-color: #3b82f6; }
+  .table-toolbar .tt-count { margin-left: auto; color: #64748b; }
   td { padding: .65rem .75rem; vertical-align: middle; }
 
   .source-badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: .7rem; font-weight: 600; }
@@ -370,24 +380,40 @@
     </div>
 
     {% if jobs %}
+    <div class="table-toolbar">
+      <label class="tt-check">
+        <input type="checkbox" id="hide-ignored" onchange="applyFilters()">
+        Hide ignored
+      </label>
+      <label class="tt-field">
+        Min fit score
+        <input type="number" id="min-score" min="0" max="100" step="5" placeholder="0"
+               oninput="applyFilters()" style="width:4rem">
+      </label>
+      <span class="tt-count" id="visible-count"></span>
+    </div>
     <table>
       <thead>
         <tr>
-          <th>Fit</th>
-          <th>Title</th>
-          <th>Company</th>
-          <th>Size</th>
-          <th>Location</th>
-          <th>Salary</th>
-          <th>Source</th>
-          <th>Posted</th>
-          <th>Status</th>
+          <th class="sortable" data-type="num"  onclick="sortTable(0,'num',this)">Fit</th>
+          <th class="sortable" data-type="text" onclick="sortTable(1,'text',this)">Title</th>
+          <th class="sortable" data-type="text" onclick="sortTable(2,'text',this)">Company</th>
+          <th class="sortable" data-type="num"  onclick="sortTable(3,'num',this)">Size</th>
+          <th class="sortable" data-type="text" onclick="sortTable(4,'text',this)">Location</th>
+          <th class="sortable" data-type="text" onclick="sortTable(5,'text',this)">Salary</th>
+          <th class="sortable" data-type="text" onclick="sortTable(6,'text',this)">Source</th>
+          <th class="sortable" data-type="date" onclick="sortTable(7,'date',this)">Posted</th>
+          <th class="sortable" data-type="text" onclick="sortTable(8,'status',this)">Status</th>
           <th></th>
         </tr>
       </thead>
       <tbody id="job-table-body">
         {% for job in jobs %}
-        <tr id="row-{{ job.id }}">
+        <tr id="row-{{ job.id }}"
+            data-score="{{ job.score if job.score is not none else -1 }}"
+            data-size="{{ job.company_size if job.company_size else -1 }}"
+            data-status="{{ job.status }}"
+            data-posted="{{ (job.posted_at or job.scraped_at or '')[:10] }}">
           <td style="white-space:nowrap">
             {% if job.score is not none %}
               {% if job.score >= 80 %}
@@ -477,11 +503,72 @@
 </div>
 
 <script>
+// --- Table sorting ---
+let _sortState = { col: null, dir: 1 };
+
+function _sortValue(row, col) {
+  if (col === 0) return Number(row.dataset.score);   // Fit
+  if (col === 3) return Number(row.dataset.size);    // Size
+  if (col === 7) return row.dataset.posted || '';    // Posted (YYYY-MM-DD)
+  if (col === 8) return row.dataset.status || '';    // Status
+  const cell = row.cells[col];
+  return cell ? cell.textContent.trim().toLowerCase() : '';
+}
+
+function sortTable(col, type, th) {
+  const tbody = document.getElementById('job-table-body');
+  const rows = Array.from(tbody.rows);
+  // Toggle direction if same column, else default ascending
+  _sortState.dir = (_sortState.col === col) ? -_sortState.dir : 1;
+  _sortState.col = col;
+  const dir = _sortState.dir;
+
+  rows.sort((a, b) => {
+    let va = _sortValue(a, col), vb = _sortValue(b, col);
+    if (type === 'num') return (va - vb) * dir;
+    return String(va).localeCompare(String(vb)) * dir;
+  });
+  rows.forEach(r => tbody.appendChild(r));
+
+  // Header arrow indicators
+  document.querySelectorAll('thead th.sortable').forEach(h => h.classList.remove('sort-asc', 'sort-desc'));
+  th.classList.add(dir === 1 ? 'sort-asc' : 'sort-desc');
+}
+
+// --- Table filtering ---
+function applyFilters() {
+  const hideIgnored = document.getElementById('hide-ignored').checked;
+  const minScoreRaw = document.getElementById('min-score').value;
+  const minScore = minScoreRaw === '' ? null : Number(minScoreRaw);
+  const tbody = document.getElementById('job-table-body');
+  let visible = 0;
+
+  Array.from(tbody.rows).forEach(row => {
+    let show = true;
+    if (hideIgnored && row.dataset.status === 'ignored') show = false;
+    if (show && minScore !== null) {
+      const score = Number(row.dataset.score);   // -1 = unscored
+      if (score < minScore) show = false;
+    }
+    row.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+
+  const countEl = document.getElementById('visible-count');
+  if (countEl) countEl.textContent = `${visible} shown`;
+}
+
+document.addEventListener('DOMContentLoaded', applyFilters);
+
 async function setStatus(jobId, status, select) {
   const fd = new FormData();
   fd.append('status', status);
   await fetch(`/status/${jobId}`, { method: 'POST', body: fd });
   select.className = `status-select status-${status}`;
+  // Keep the row's sort/filter key in sync, then re-apply filters
+  const row = document.getElementById(`row-${jobId}`);
+  if (row) row.dataset.status = status;
+  applyFilters();
   // Prompt for a note when manually setting to rejected
   if (status === 'rejected') openModal(jobId);
 }
