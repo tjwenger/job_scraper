@@ -10,8 +10,9 @@ A locally-hosted job scraper and ranking dashboard targeting VP / Director-level
 
 ## Features
 
-- **Multi-source scraping** — LinkedIn, Greenhouse ATS (~35 companies), Indeed, Glassdoor, Remote OK, We Work Remotely, Hacker News
-- **Remote-only filtering** — LinkedIn fetches full job descriptions and drops any role that mentions hybrid/on-site requirements
+- **Multi-source scraping** — LinkedIn, Greenhouse ATS, Ashby ATS, Lever ATS, Glassdoor, Remote OK, We Work Remotely, Hacker News (Indeed is disabled — it blocks all automated access behind Cloudflare)
+- **Remote-only filtering** — a shared positive-remote gate (`scrapers/filters.py`) keeps a job only when it shows an affirmative remote signal; hybrid and weekly office-cadence roles are dropped
+- **Software-role filtering** — rejects physical/industrial "Engineering" leadership jobs (process/mechanical/manufacturing) that share the same titles as software roles
 - **AI fit scoring** — each job is scored 0–100 against your resume by Claude Haiku, with a one-line reason and estimated company headcount
 - **Application tracking** — status workflow: New → Interested → Applied / Rejected / Ignored / Declined
 - **Decline with notes** — record why you passed; review notes at `/rejections` to tune keyword filters
