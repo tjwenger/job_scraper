@@ -13,19 +13,49 @@ import time
 from datetime import datetime, timezone
 from config import KEYWORDS, EXCLUDE_KEYWORDS, USER_AGENT
 
+# Discovered via scripts/discover_lever.py (search-engine dorking of
+# site:jobs.lever.co) then validated against the Lever API. Leadership roles
+# come and go, so this is every live tech board found — the per-job
+# software-role / remote / non-tech filters handle quality at scrape time.
 LEVER_COMPANIES = [
-    # Consumer / Marketplace
-    "spotify", "gopuff", "ro",
-    # Data / Enterprise
-    "palantir", "zoox",
-    # Fintech
-    "anchorage", "wealthfront",
-    # Security
-    "sysdig", "secureframe",
-    # HR / Recruiting
-    "15five", "findem",
-    # Identity / Risk
+    "15five",
+    "actian",
+    "alignable",
     "alloy",
+    "anchorage",
+    "applydigital",
+    "coderpad",
+    "findem",
+    "getsquire",
+    "getzuma",
+    "gohighlevel",
+    "gomaterials",
+    "gopuff",
+    "highspot",
+    "includedhealth",
+    "jetbridge",
+    "jumpcloud",
+    "loopreturns",
+    "matchgroup",
+    "mechanicalorchard",
+    "metabase",
+    "offchainlabs",
+    "palantir",
+    "raya",
+    "remofirst",
+    "ro",
+    "secureframe",
+    "spotify",
+    "super-com",
+    "sysdig",
+    "thinkahead",
+    "tracktik",
+    "traackr",
+    "vivenu",
+    "wealthfront",
+    "whoop",
+    "workwave",
+    "zoox",
 ]
 
 DELAY_SECONDS = 0.3
